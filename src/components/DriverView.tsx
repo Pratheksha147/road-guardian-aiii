@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { MicroZone, RiskScore } from '@/types/safezone';
+import { useState, useEffect, useRef } from 'react';
+import { MicroZone, RiskScore, Alert } from '@/types/safezone';
 import { useSimulatedLocation } from '@/hooks/useGeolocation';
 import { useAlerts } from '@/hooks/useAlerts';
+import { useVoiceAlerts } from '@/hooks/useVoiceAlerts';
 import { microZones, calculateDistance } from '@/data/microZones';
 import { calculateRiskScore, getSimulatedWeather, getSimulatedTraffic } from '@/lib/riskEngine';
 import { MapPlaceholder } from './MapPlaceholder';
@@ -10,21 +11,52 @@ import { ZoneCard } from './ZoneCard';
 import { SpeedDisplay } from './SpeedDisplay';
 import { StatusIndicator } from './StatusIndicator';
 import { RiskMeter } from './RiskMeter';
+import { VoiceIndicator } from './VoiceIndicator';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Volume2, VolumeX, List, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const DriverView = () => {
   const [isTracking, setIsTracking] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [selectedZone, setSelectedZone] = useState<MicroZone | null>(null);
   const [showZoneList, setShowZoneList] = useState(false);
   
   const { location, isTracking: gpsActive } = useSimulatedLocation(isTracking);
   const { alerts, activeAlert, dismissActiveAlert } = useAlerts(location);
+  const { isSupported, isSpeaking, speakAlert, stop } = useVoiceAlerts(voiceEnabled);
+  
+  // Track last spoken alert to avoid repeating
+  const lastSpokenAlertRef = useRef<string | null>(null);
 
   // Calculate nearest zone risk
   const [nearestZoneRisk, setNearestZoneRisk] = useState<{ zone: MicroZone; risk: RiskScore; distance: number } | null>(null);
+
+  // Speak alert when a new active alert appears
+  useEffect(() => {
+    if (activeAlert && voiceEnabled && activeAlert.id !== lastSpokenAlertRef.current) {
+      const { riskScore, zoneName } = activeAlert;
+      
+      // Only speak for moderate risk or higher
+      if (riskScore.score >= 40) {
+        speakAlert(
+          zoneName,
+          riskScore.level,
+          riskScore.score,
+          riskScore.explanation,
+          riskScore.suggestedAction
+        );
+        lastSpokenAlertRef.current = activeAlert.id;
+      }
+    }
+  }, [activeAlert, voiceEnabled, speakAlert]);
+
+  // Stop speaking when voice is disabled
+  useEffect(() => {
+    if (!voiceEnabled) {
+      stop();
+    }
+  }, [voiceEnabled, stop]);
 
   useEffect(() => {
     if (!location) return;
@@ -72,12 +104,13 @@ export const DriverView = () => {
               {isTracking ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
             <Button
-              variant="glass"
+              variant={voiceEnabled ? "glass" : "ghost"}
               size="icon"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="h-10 w-10"
+              onClick={() => setVoiceEnabled(!voiceEnabled)}
+              className={cn("h-10 w-10", !voiceEnabled && "opacity-50")}
+              title={isSupported ? "Toggle voice alerts" : "Voice alerts not supported"}
             >
-              {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             </Button>
             <Button
               variant="glass"
@@ -88,6 +121,11 @@ export const DriverView = () => {
               {showZoneList ? <X className="h-4 w-4" /> : <List className="h-4 w-4" />}
             </Button>
           </div>
+          
+          {/* Voice Status Indicator */}
+          {voiceEnabled && isSupported && (
+            <VoiceIndicator isSpeaking={isSpeaking} />
+          )}
         </div>
 
         {/* Speed display - Bottom Right */}
