@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { MicroZone, RiskScore, Alert } from '@/types/safezone';
+import { MicroZone, RiskScore } from '@/types/safezone';
 import { useSimulatedLocation } from '@/hooks/useGeolocation';
 import { useAlerts } from '@/hooks/useAlerts';
 import { useVoiceAlerts } from '@/hooks/useVoiceAlerts';
+import { useAIReasoning } from '@/hooks/useAIReasoning';
 import { microZones, calculateDistance } from '@/data/microZones';
 import { calculateRiskScore, getSimulatedWeather, getSimulatedTraffic } from '@/lib/riskEngine';
 import { MapPlaceholder } from './MapPlaceholder';
-import { AlertCard } from './AlertCard';
+import { AIAlertCard } from './AIAlertCard';
 import { ZoneCard } from './ZoneCard';
 import { SpeedDisplay } from './SpeedDisplay';
 import { StatusIndicator } from './StatusIndicator';
 import { RiskMeter } from './RiskMeter';
 import { VoiceIndicator } from './VoiceIndicator';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Volume2, VolumeX, List, X } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, List, X, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const DriverView = () => {
@@ -25,31 +26,44 @@ export const DriverView = () => {
   const { location, isTracking: gpsActive } = useSimulatedLocation(isTracking);
   const { alerts, activeAlert, dismissActiveAlert } = useAlerts(location);
   const { isSupported, isSpeaking, speakAlert, stop } = useVoiceAlerts(voiceEnabled);
+  const { reasoning, isLoading: isLoadingAI, generateReasoning } = useAIReasoning();
   
-  // Track last spoken alert to avoid repeating
+  // Track last spoken alert and last AI-analyzed alert
   const lastSpokenAlertRef = useRef<string | null>(null);
+  const lastAnalyzedAlertRef = useRef<string | null>(null);
 
   // Calculate nearest zone risk
   const [nearestZoneRisk, setNearestZoneRisk] = useState<{ zone: MicroZone; risk: RiskScore; distance: number } | null>(null);
 
-  // Speak alert when a new active alert appears
+  // Get current conditions
+  const weather = getSimulatedWeather();
+  const traffic = getSimulatedTraffic();
+
+  // Generate AI reasoning when a new alert appears
   useEffect(() => {
-    if (activeAlert && voiceEnabled && activeAlert.id !== lastSpokenAlertRef.current) {
-      const { riskScore, zoneName } = activeAlert;
-      
-      // Only speak for moderate risk or higher
-      if (riskScore.score >= 40) {
-        speakAlert(
-          zoneName,
-          riskScore.level,
-          riskScore.score,
-          riskScore.explanation,
-          riskScore.suggestedAction
-        );
-        lastSpokenAlertRef.current = activeAlert.id;
-      }
+    if (activeAlert && activeAlert.id !== lastAnalyzedAlertRef.current) {
+      lastAnalyzedAlertRef.current = activeAlert.id;
+      generateReasoning(activeAlert, location?.speed || 0, weather, traffic);
     }
-  }, [activeAlert, voiceEnabled, speakAlert]);
+  }, [activeAlert, location?.speed, weather, traffic, generateReasoning]);
+
+  // Speak alert when AI reasoning is ready
+  useEffect(() => {
+    if (activeAlert && reasoning && voiceEnabled && activeAlert.id !== lastSpokenAlertRef.current) {
+      // Use AI-enhanced explanation for voice
+      const explanation = reasoning.explanation;
+      const action = `Recommended speed: ${reasoning.safeSpeed}. ${reasoning.recommendations[0] || ''}`;
+      
+      speakAlert(
+        activeAlert.zoneName,
+        activeAlert.riskScore.level,
+        activeAlert.riskScore.score,
+        explanation,
+        action
+      );
+      lastSpokenAlertRef.current = activeAlert.id;
+    }
+  }, [activeAlert, reasoning, voiceEnabled, speakAlert]);
 
   // Stop speaking when voice is disabled
   useEffect(() => {
@@ -61,10 +75,6 @@ export const DriverView = () => {
   useEffect(() => {
     if (!location) return;
 
-    const weather = getSimulatedWeather();
-    const traffic = getSimulatedTraffic();
-    const hour = new Date().getHours();
-
     let nearest: { zone: MicroZone; risk: RiskScore; distance: number } | null = null;
     let minDistance = Infinity;
 
@@ -72,13 +82,14 @@ export const DriverView = () => {
       const distance = calculateDistance(location.lat, location.lng, zone.lat, zone.lng);
       if (distance < minDistance) {
         minDistance = distance;
+        const hour = new Date().getHours();
         const risk = calculateRiskScore(zone, weather, traffic, hour);
         nearest = { zone, risk, distance };
       }
     });
 
     setNearestZoneRisk(nearest);
-  }, [location]);
+  }, [location, weather, traffic]);
 
   return (
     <div className="relative flex h-[calc(100vh-4rem)] flex-col lg:flex-row">
@@ -126,6 +137,16 @@ export const DriverView = () => {
           {voiceEnabled && isSupported && (
             <VoiceIndicator isSpeaking={isSpeaking} />
           )}
+          
+          {/* AI Status */}
+          {activeAlert && (
+            <div className="flex items-center gap-2 glass-panel rounded-lg px-3 py-2">
+              <Sparkles className={cn("h-4 w-4", isLoadingAI ? "animate-pulse text-primary" : "text-safe")} />
+              <span className="text-xs text-muted-foreground">
+                {isLoadingAI ? 'AI Analyzing...' : 'AI Enhanced'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Speed display - Bottom Right */}
@@ -150,11 +171,13 @@ export const DriverView = () => {
           </div>
         )}
 
-        {/* Active Alert Overlay */}
+        {/* Active Alert Overlay with AI Enhancement */}
         {activeAlert && (
           <div className="absolute bottom-20 left-4 right-4 z-40 lg:bottom-4 lg:left-auto lg:right-auto lg:left-1/2 lg:-translate-x-1/2 lg:w-[500px]">
-            <AlertCard 
-              alert={activeAlert} 
+            <AIAlertCard 
+              alert={activeAlert}
+              aiReasoning={reasoning}
+              isLoadingAI={isLoadingAI}
               onDismiss={dismissActiveAlert}
               isActive
             />
@@ -187,8 +210,6 @@ export const DriverView = () => {
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-3">
               {microZones.map(zone => {
-                const weather = getSimulatedWeather();
-                const traffic = getSimulatedTraffic();
                 const hour = new Date().getHours();
                 const riskScore = calculateRiskScore(zone, weather, traffic, hour);
                 const distance = location 
