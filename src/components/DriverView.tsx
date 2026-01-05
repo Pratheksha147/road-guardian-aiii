@@ -6,7 +6,7 @@ import { useVoiceAlerts } from '@/hooks/useVoiceAlerts';
 import { useAIReasoning } from '@/hooks/useAIReasoning';
 import { microZones, calculateDistance } from '@/data/microZones';
 import { calculateRiskScore, getSimulatedWeather, getSimulatedTraffic } from '@/lib/riskEngine';
-import { MapPlaceholder } from './MapPlaceholder';
+import { GoogleMap } from './GoogleMap';
 import { AIAlertCard } from './AIAlertCard';
 import { ZoneCard } from './ZoneCard';
 import { SpeedDisplay } from './SpeedDisplay';
@@ -95,7 +95,7 @@ export const DriverView = () => {
     <div className="relative flex h-[calc(100vh-4rem)] flex-col lg:flex-row">
       {/* Map area */}
       <div className="relative flex-1">
-        <MapPlaceholder 
+        <GoogleMap 
           driverLocation={location}
           selectedZone={selectedZone}
           onZoneSelect={setSelectedZone}
