@@ -1,73 +1,63 @@
-# Welcome to your Lovable project
+🚦 SafeZone – Road Risk Awareness System
 
-## Project info
+SafeZone is a web-based road safety application designed to help drivers and authorities identify and understand high-risk road zones in advance. The system focuses on prevention rather than reaction, aiming to improve safety through timely awareness and clear guidance.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+🌟 Project Purpose
 
-## How can I edit this code?
+Road accidents often occur at specific locations such as sharp curves, poorly lit roads, and high-traffic intersections. Many existing systems respond after an incident occurs.
 
-There are several ways of editing your application.
+SafeZone aims to support safer travel by:
 
-**Use Lovable**
+Detecting nearby risk-prone road zones
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Providing early visual and voice alerts
 
-Changes made via Lovable will be committed automatically to this repo.
+Offering clear explanations and safety suggestions
 
-**Use your preferred IDE**
+Assisting authorities with risk monitoring and insights
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+🛠️ What the Project Does
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Shows the user’s current location on a map
 
-Follow these steps:
+Highlights nearby road risk zones
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Calculates a risk score based on road features and context
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Displays easy-to-understand safety alerts
 
-# Step 3: Install the necessary dependencies.
-npm i
+Provides voice alerts for hands-free driving
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Includes an authority dashboard for monitoring risk trends
 
-**Edit a file directly in GitHub**
+🧠 About the Intelligence Used
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The system uses AI-assisted, rule-based reasoning to analyze multiple factors such as:
 
-**Use GitHub Codespaces**
+Road characteristics
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Proximity to risk zones
 
-## What technologies are used for this project?
+Current speed and context
 
-This project is built with:
+This approach allows the system to generate explainable and understandable insights.
+Generative AI can be integrated in future versions if needed.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+🗺️ Technologies Used
 
-## How can I deploy this project?
+Frontend: React.js (TypeScript), Vite, Tailwind CSS
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+UI Components: shadcn/ui, Lucide Icons
 
-## Can I connect a custom domain to my Lovable project?
+Mapping: Google Maps JavaScript API
 
-Yes, you can!
+Location Tracking: Browser Geolocation API
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Risk Analysis: Rule-based, context-aware logic
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Backend Services: Supabase (Edge Functions)
+
+Voice Alerts: Web Speech API
+🚀 How to Run the Project
+
+Clone the repository : 
