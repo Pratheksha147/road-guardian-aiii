@@ -58,6 +58,41 @@ Risk Analysis: Rule-based, context-aware logic
 Backend Services: Supabase (Edge Functions)
 
 Voice Alerts: Web Speech API
+
 🚀 How to Run the Project
 
-Clone the repository : 
+1.Clone the repository : https://github.com/Pratheksha147/road-guardian-aiii.git
+2.Install dependencies
+npm install
+3.Start the development server
+npm run dev
+4.Open the application in your browser
+http://localhost:8082/
+
+📌 Intended Use
+
+This project is developed for:
+
+Educational purposes
+
+Hackathons and academic evaluations
+
+Demonstrating preventive road safety concepts
+
+It is not intended to replace official navigation or emergency systems.
+
+🔮 Future Improvements
+
+Integration of generative AI for detailed explanations
+
+Weather and traffic-based risk updates
+
+Enhanced analytics for authorities
+
+Support for additional regions and datasets
+
+🙏 Acknowledgement
+
+This project is built as part of an academic and learning initiative, with a focus on applying technology to real-world safety challenges.
+
+
