@@ -22,18 +22,18 @@ export const DriverView = () => {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [selectedZone, setSelectedZone] = useState<MicroZone | null>(null);
   const [showZoneList, setShowZoneList] = useState(false);
+  const [voiceAlertPulse, setVoiceAlertPulse] = useState(false);
   
   const { location, isTracking: gpsActive } = useSimulatedLocation(isTracking);
   const { alerts, activeAlert, dismissActiveAlert } = useAlerts(location);
   const { isSupported, isSpeaking, speakAlert, stop } = useVoiceAlerts(voiceEnabled);
   const { reasoning, isLoading: isLoadingAI, generateReasoning } = useAIReasoning();
   
-  // Track last spoken alert and last AI-analyzed alert
-  const lastSpokenAlertRef = useRef<string | null>(null);
+  // Track last AI-analyzed alert
   const lastAnalyzedAlertRef = useRef<string | null>(null);
-  const lastVoiceAlertTimeRef = useRef<number>(0);
+  const voiceIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
-  const VOICE_ALERT_COOLDOWN_MS = 120000; // 2 minutes between voice alerts
+  const VOICE_ALERT_INTERVAL_MS = 120000; // 2 minutes between voice alerts
 
   // Calculate nearest zone risk
   const [nearestZoneRisk, setNearestZoneRisk] = useState<{ zone: MicroZone; risk: RiskScore; distance: number } | null>(null);
@@ -50,33 +50,54 @@ export const DriverView = () => {
     }
   }, [activeAlert, location?.speed, weather, traffic, generateReasoning]);
 
-  // Speak alert when AI reasoning is ready (with 2-minute cooldown)
-  useEffect(() => {
-    const now = Date.now();
-    const timeSinceLastVoice = now - lastVoiceAlertTimeRef.current;
+  // Function to trigger voice alert with visual pulse
+  const triggerVoiceAlert = () => {
+    if (!activeAlert || !reasoning || !voiceEnabled) return;
     
-    if (
-      activeAlert && 
-      reasoning && 
-      voiceEnabled && 
-      activeAlert.id !== lastSpokenAlertRef.current &&
-      timeSinceLastVoice >= VOICE_ALERT_COOLDOWN_MS
-    ) {
-      // Use AI-enhanced explanation for voice
-      const explanation = reasoning.explanation;
-      const action = `Recommended speed: ${reasoning.safeSpeed}. ${reasoning.recommendations[0] || ''}`;
-      
-      speakAlert(
-        activeAlert.zoneName,
-        activeAlert.riskScore.level,
-        activeAlert.riskScore.score,
-        explanation,
-        action
-      );
-      lastSpokenAlertRef.current = activeAlert.id;
-      lastVoiceAlertTimeRef.current = now;
+    // Trigger visual pulse effect
+    setVoiceAlertPulse(true);
+    setTimeout(() => setVoiceAlertPulse(false), 1000);
+    
+    // Speak the alert
+    const explanation = reasoning.explanation;
+    const action = `Recommended speed: ${reasoning.safeSpeed}. ${reasoning.recommendations[0] || ''}`;
+    
+    speakAlert(
+      activeAlert.zoneName,
+      activeAlert.riskScore.level,
+      activeAlert.riskScore.score,
+      explanation,
+      action
+    );
+  };
+
+  // Set up recurring voice alerts every 2 minutes when there's an active alert
+  useEffect(() => {
+    // Clear any existing interval
+    if (voiceIntervalRef.current) {
+      clearInterval(voiceIntervalRef.current);
+      voiceIntervalRef.current = null;
     }
-  }, [activeAlert, reasoning, voiceEnabled, speakAlert]);
+
+    // If we have an active alert with reasoning and voice is enabled
+    if (activeAlert && reasoning && voiceEnabled) {
+      // Trigger immediately on first alert
+      triggerVoiceAlert();
+      
+      // Set up interval for every 2 minutes
+      voiceIntervalRef.current = setInterval(() => {
+        triggerVoiceAlert();
+      }, VOICE_ALERT_INTERVAL_MS);
+    }
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (voiceIntervalRef.current) {
+        clearInterval(voiceIntervalRef.current);
+        voiceIntervalRef.current = null;
+      }
+    };
+  }, [activeAlert?.id, reasoning, voiceEnabled]);
 
   // Stop speaking when voice is disabled
   useEffect(() => {
@@ -146,9 +167,14 @@ export const DriverView = () => {
             </Button>
           </div>
           
-          {/* Voice Status Indicator */}
+          {/* Voice Status Indicator with pulse effect */}
           {voiceEnabled && isSupported && (
-            <VoiceIndicator isSpeaking={isSpeaking} />
+            <div className={cn(
+              "transition-all duration-300",
+              voiceAlertPulse && "scale-110"
+            )}>
+              <VoiceIndicator isSpeaking={isSpeaking} showPulse={voiceAlertPulse} />
+            </div>
           )}
           
           {/* AI Status */}
