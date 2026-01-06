@@ -31,6 +31,9 @@ export const DriverView = () => {
   // Track last spoken alert and last AI-analyzed alert
   const lastSpokenAlertRef = useRef<string | null>(null);
   const lastAnalyzedAlertRef = useRef<string | null>(null);
+  const lastVoiceAlertTimeRef = useRef<number>(0);
+  
+  const VOICE_ALERT_COOLDOWN_MS = 120000; // 2 minutes between voice alerts
 
   // Calculate nearest zone risk
   const [nearestZoneRisk, setNearestZoneRisk] = useState<{ zone: MicroZone; risk: RiskScore; distance: number } | null>(null);
@@ -47,9 +50,18 @@ export const DriverView = () => {
     }
   }, [activeAlert, location?.speed, weather, traffic, generateReasoning]);
 
-  // Speak alert when AI reasoning is ready
+  // Speak alert when AI reasoning is ready (with 2-minute cooldown)
   useEffect(() => {
-    if (activeAlert && reasoning && voiceEnabled && activeAlert.id !== lastSpokenAlertRef.current) {
+    const now = Date.now();
+    const timeSinceLastVoice = now - lastVoiceAlertTimeRef.current;
+    
+    if (
+      activeAlert && 
+      reasoning && 
+      voiceEnabled && 
+      activeAlert.id !== lastSpokenAlertRef.current &&
+      timeSinceLastVoice >= VOICE_ALERT_COOLDOWN_MS
+    ) {
       // Use AI-enhanced explanation for voice
       const explanation = reasoning.explanation;
       const action = `Recommended speed: ${reasoning.safeSpeed}. ${reasoning.recommendations[0] || ''}`;
@@ -62,6 +74,7 @@ export const DriverView = () => {
         action
       );
       lastSpokenAlertRef.current = activeAlert.id;
+      lastVoiceAlertTimeRef.current = now;
     }
   }, [activeAlert, reasoning, voiceEnabled, speakAlert]);
 

@@ -4,7 +4,7 @@ import { microZones, calculateDistance } from '@/data/microZones';
 import { calculateRiskScore, getSimulatedWeather, getSimulatedTraffic } from '@/lib/riskEngine';
 
 const ALERT_DISTANCE_KM = 0.5; // Alert when within 500m
-const ALERT_COOLDOWN_MS = 30000; // 30 seconds between alerts for same zone
+const ALERT_COOLDOWN_MS = 120000; // 2 minutes between alerts for same zone
 
 export const useAlerts = (location: DriverLocation | null) => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
