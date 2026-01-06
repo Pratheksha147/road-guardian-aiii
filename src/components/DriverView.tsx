@@ -14,7 +14,7 @@ import { StatusIndicator } from './StatusIndicator';
 import { RiskMeter } from './RiskMeter';
 import { VoiceIndicator } from './VoiceIndicator';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Volume2, VolumeX, List, X, Sparkles } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, List, X, Sparkles, BellRing } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const DriverView = () => {
@@ -166,6 +166,19 @@ export const DriverView = () => {
               {showZoneList ? <X className="h-4 w-4" /> : <List className="h-4 w-4" />}
             </Button>
           </div>
+          
+          {/* Demo Test Button for Voice Alert */}
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={triggerVoiceAlert}
+            disabled={!voiceEnabled || !isSupported || !activeAlert || !reasoning}
+            className="flex items-center gap-2 text-xs"
+            title="Test voice alert (demo)"
+          >
+            <BellRing className="h-4 w-4" />
+            Test Alert
+          </Button>
           
           {/* Voice Status Indicator with pulse effect */}
           {voiceEnabled && isSupported && (
