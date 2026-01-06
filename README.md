@@ -62,12 +62,16 @@ Voice Alerts: Web Speech API
 🚀 How to Run the Project
 
 1.Clone the repository : https://github.com/Pratheksha147/road-guardian-aiii.git
+
 2.Install dependencies
+
 npm install
+
 3.Start the development server
+
 npm run dev
-4.Open the application in your browser
-http://localhost:8082/
+
+4.Open the application in your browser : http://localhost:8082/
 
 📌 Intended Use
 
