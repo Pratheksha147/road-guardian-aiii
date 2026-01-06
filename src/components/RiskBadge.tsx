@@ -38,7 +38,7 @@ export const RiskBadge = ({
       variant={config.variant}
       className={cn(
         sizeClasses[size],
-        animated && level !== 'safe' && level !== 'low' && 'animate-pulse',
+        animated && level !== 'safe' && level !== 'low' && 'animate-pulse-slower',
         'font-semibold tracking-wide'
       )}
     >

@@ -61,7 +61,13 @@ export const RiskMeter = ({ score, level, size = 'md' }: RiskMeterProps) => {
       
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn('font-mono font-bold', fontSizes[size])} style={{ color: getColor() }}>
+        <span 
+          className={cn(
+            'font-mono font-bold animate-pulse-slower', 
+            fontSizes[size]
+          )} 
+          style={{ color: getColor() }}
+        >
           {score}
         </span>
         <span className="text-xs uppercase tracking-wider text-muted-foreground">
