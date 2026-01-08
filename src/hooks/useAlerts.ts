@@ -1,22 +1,40 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Alert, DriverLocation, MicroZone, RiskScore } from '@/types/safezone';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Alert, DriverLocation, WeatherCondition, TrafficDensity } from '@/types/safezone';
 import { microZones, calculateDistance } from '@/data/microZones';
 import { calculateRiskScore, getSimulatedWeather, getSimulatedTraffic } from '@/lib/riskEngine';
 
 const ALERT_DISTANCE_KM = 0.5; // Alert when within 500m
 const ALERT_COOLDOWN_MS = 120000; // 2 minutes between alerts for same zone
+const CONDITION_UPDATE_INTERVAL_MS = 20000; // Update weather/traffic every 20 seconds
 
 export const useAlerts = (location: DriverLocation | null) => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [activeAlert, setActiveAlert] = useState<Alert | null>(null);
   const [alertHistory, setAlertHistory] = useState<Map<string, number>>(new Map());
+  
+  // Stable conditions - updated every 20 seconds
+  const stableConditionsRef = useRef<{ weather: WeatherCondition; traffic: TrafficDensity }>({
+    weather: getSimulatedWeather(),
+    traffic: getSimulatedTraffic(),
+  });
+  
+  // Update conditions every 20 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      stableConditionsRef.current = {
+        weather: getSimulatedWeather(),
+        traffic: getSimulatedTraffic(),
+      };
+    }, CONDITION_UPDATE_INTERVAL_MS);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const checkForAlerts = useCallback(() => {
     if (!location) return;
 
     const now = Date.now();
-    const weather = getSimulatedWeather();
-    const traffic = getSimulatedTraffic();
+    const { weather, traffic } = stableConditionsRef.current;
     const hour = new Date().getHours();
 
     microZones.forEach(zone => {

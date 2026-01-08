@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { MicroZone, RiskScore } from '@/types/safezone';
+import { MicroZone } from '@/types/safezone';
 import { useSimulatedLocation } from '@/hooks/useGeolocation';
 import { useAlerts } from '@/hooks/useAlerts';
 import { useVoiceAlerts } from '@/hooks/useVoiceAlerts';
 import { useAIReasoning } from '@/hooks/useAIReasoning';
-import { microZones, calculateDistance } from '@/data/microZones';
-import { calculateRiskScore, getSimulatedWeather, getSimulatedTraffic } from '@/lib/riskEngine';
+import { useStableRiskValues } from '@/hooks/useStableRiskValues';
+import { microZones } from '@/data/microZones';
 import { GoogleMap } from './GoogleMap';
 import { AIAlertCard } from './AIAlertCard';
 import { ZoneCard } from './ZoneCard';
@@ -29,26 +29,22 @@ export const DriverView = () => {
   const { isSupported, isSpeaking, speakAlert, stop } = useVoiceAlerts(voiceEnabled);
   const { reasoning, isLoading: isLoadingAI, generateReasoning } = useAIReasoning();
   
+  // Use stable risk values that update every 20 seconds with smooth transitions
+  const { stableNearestZone, displayScore, stableConditions, stableZoneList } = useStableRiskValues(location);
+  
   // Track last AI-analyzed alert
   const lastAnalyzedAlertRef = useRef<string | null>(null);
   const voiceIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const VOICE_ALERT_INTERVAL_MS = 120000; // 2 minutes between voice alerts
 
-  // Calculate nearest zone risk
-  const [nearestZoneRisk, setNearestZoneRisk] = useState<{ zone: MicroZone; risk: RiskScore; distance: number } | null>(null);
-
-  // Get current conditions
-  const weather = getSimulatedWeather();
-  const traffic = getSimulatedTraffic();
-
   // Generate AI reasoning when a new alert appears
   useEffect(() => {
     if (activeAlert && activeAlert.id !== lastAnalyzedAlertRef.current) {
       lastAnalyzedAlertRef.current = activeAlert.id;
-      generateReasoning(activeAlert, location?.speed || 0, weather, traffic);
+      generateReasoning(activeAlert, location?.speed || 0, stableConditions.weather, stableConditions.traffic);
     }
-  }, [activeAlert, location?.speed, weather, traffic, generateReasoning]);
+  }, [activeAlert, location?.speed, stableConditions, generateReasoning]);
 
   // Function to trigger voice alert with visual pulse
   const triggerVoiceAlert = () => {
@@ -105,25 +101,6 @@ export const DriverView = () => {
       stop();
     }
   }, [voiceEnabled, stop]);
-
-  useEffect(() => {
-    if (!location) return;
-
-    let nearest: { zone: MicroZone; risk: RiskScore; distance: number } | null = null;
-    let minDistance = Infinity;
-
-    microZones.forEach(zone => {
-      const distance = calculateDistance(location.lat, location.lng, zone.lat, zone.lng);
-      if (distance < minDistance) {
-        minDistance = distance;
-        const hour = new Date().getHours();
-        const risk = calculateRiskScore(zone, weather, traffic, hour);
-        nearest = { zone, risk, distance };
-      }
-    });
-
-    setNearestZoneRisk(nearest);
-  }, [location, weather, traffic]);
 
   return (
     <div className="relative flex h-[calc(100vh-4rem)] flex-col lg:flex-row">
@@ -208,17 +185,17 @@ export const DriverView = () => {
           </div>
         )}
 
-        {/* Nearest zone risk - Top Right */}
-        {nearestZoneRisk && (
+        {/* Nearest zone risk - Top Right - Uses stable values */}
+        {stableNearestZone && (
           <div className="absolute right-4 top-20 z-30 glass-panel rounded-xl p-4 lg:top-4">
             <p className="mb-2 text-xs font-medium text-muted-foreground">Nearest Zone Risk</p>
             <RiskMeter 
-              score={nearestZoneRisk.risk.score} 
-              level={nearestZoneRisk.risk.level}
+              score={displayScore} 
+              level={stableNearestZone.risk.level}
               size="sm"
             />
             <p className="mt-2 text-center text-xs text-muted-foreground">
-              {nearestZoneRisk.zone.name}
+              {stableNearestZone.zone.name}
             </p>
           </div>
         )}
@@ -237,7 +214,7 @@ export const DriverView = () => {
         )}
       </div>
 
-      {/* Sidebar - Zone List */}
+      {/* Sidebar - Zone List - Uses stable zone list */}
       <div className={cn(
         'absolute inset-y-0 right-0 z-30 w-80 transform transition-transform duration-300 lg:relative lg:transform-none',
         'glass-panel border-l border-border',
@@ -261,24 +238,16 @@ export const DriverView = () => {
           
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-3">
-              {microZones.map(zone => {
-                const hour = new Date().getHours();
-                const riskScore = calculateRiskScore(zone, weather, traffic, hour);
-                const distance = location 
-                  ? calculateDistance(location.lat, location.lng, zone.lat, zone.lng)
-                  : undefined;
-
-                return (
-                  <ZoneCard
-                    key={zone.id}
-                    zone={zone}
-                    riskScore={riskScore}
-                    distance={distance}
-                    selected={selectedZone?.id === zone.id}
-                    onClick={() => setSelectedZone(zone)}
-                  />
-                );
-              })}
+              {stableZoneList.map(({ zone, riskScore, distance }) => (
+                <ZoneCard
+                  key={zone.id}
+                  zone={zone}
+                  riskScore={riskScore}
+                  distance={distance}
+                  selected={selectedZone?.id === zone.id}
+                  onClick={() => setSelectedZone(zone)}
+                />
+              ))}
             </div>
           </div>
 
